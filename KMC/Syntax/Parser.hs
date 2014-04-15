@@ -8,7 +8,7 @@ import           Data.Functor.Identity         (Identity)
 import           Text.Parsec.Expr              (Assoc (..), Operator (..),
                                                 OperatorTable,
                                                 buildExpressionParser)
-import           Text.Parsec.Prim              (Parsec, parserZero)
+import           Text.Parsec.Prim              (Parsec)
 import           Text.ParserCombinators.Parsec hiding (Parser, (<|>))
 
 import           KMC.Syntax.External
@@ -98,8 +98,8 @@ legalChar = noneOf notChars
 
 -- | Parse a Unicode code point specification of a char.
 unicodeCodePoint :: Parser Char
-unicodeCodePoint = char '\\' *> (char 'u' *> naturalP -- Java
-                             <|> char 'x' *> braces naturalP) -- Perl
+unicodeCodePoint = char '\\' *> (char 'u' *> numeralP Hexadecimal (Just 4)
+                             <|> char 'x' *> braces (numeralP Hexadecimal (Just 4)))
                 >>= return . chr
 
 --evil = "\\$\\(\\)\\*\\+\\.\\?\\[\\\\\\^\\{\\|"
@@ -129,7 +129,8 @@ data IntegerBase = Unary    -- ^ The original and best
                  | Hexadecimal
     deriving (Show, Eq)
 
--- | Parse a numeral in the given base and, if specified, with the given length.
+-- | Parse a non-negative numeral in the given base and,
+--   if specified, with the given length.
 numeralP :: IntegerBase -> (Maybe Int) -> Parser Int
 numeralP base len = liftM combine $ repetitions len
         (liftM digitToInt (oneOf digits))

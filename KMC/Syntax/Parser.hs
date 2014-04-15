@@ -3,7 +3,7 @@ module KMC.Syntax.Parser (parseRegex) where
 import           Control.Applicative           (pure, (*>), (<$), (<$>), (<*),
                                                 (<*>), (<|>))
 import           Control.Monad                 (liftM)
-import           Data.Char                     (digitToInt)
+import           Data.Char                     (digitToInt, chr)
 import           Data.Functor.Identity         (Identity)
 import           Text.Parsec.Expr              (Assoc (..), Operator (..),
                                                 OperatorTable,
@@ -88,12 +88,22 @@ charP = Chr <$> legalChar
 -- | Parse a legal character.
 legalChar :: Parser Char
 legalChar = noneOf notChars
-         <|> try (char '$' <* lookAhead anyToken)
+         -- <|> try (char '$' <* lookAhead anyToken)
          <|> try (char '\\' *> (u <$> oneOf (map fst cs)))
+         <|> unicodeCodePoint
   where cs = [('n', '\n'), ('t', '\t'), ('r', '\r')] ++
               zip notChars notChars
-        notChars = ".\\" ++ "()" ++ "[*?+$"
+        notChars = ".\\" ++ "()" ++ "[*?+$^{|"
         u c = let Just x = lookup c cs in x
+
+-- | Parse a Unicode code point specification of a char.
+unicodeCodePoint :: Parser Char
+unicodeCodePoint = char '\\' *> (char 'u' *> naturalP -- Java
+                             <|> char 'x' *> braces naturalP) -- Perl
+                >>= return . chr
+
+--evil = "\\$\\(\\)\\*\\+\\.\\?\\[\\\\\\^\\{\\|"
+--evilM = "$()*+.?[\\^{|"
 
 -- | Parse a range of numbers.  For n, m natural numbers:
 --  'n'   - "n repetitions" - (n, Just n)
@@ -104,9 +114,37 @@ rangeP = do
     n <- naturalP
     ((,) n) <$> (char ',' *> optionMaybe naturalP
               <|> pure (Just n))
+
+-- | Parse a decimal number
+naturalP :: Parser Int
+naturalP = numeralP Decimal Nothing
+
+
+-- | Supported bases for integers.  Most of them are silly.
+data IntegerBase = Unary    -- ^ The original and best
+                 | Binary
+                 | Ternary
+                 | Octal
+                 | Decimal
+                 | Hexadecimal
+    deriving (Show, Eq)
+
+-- | Parse a numeral in the given base and, if specified, with the given length.
+numeralP :: IntegerBase -> (Maybe Int) -> Parser Int
+numeralP base len = liftM combine $ repetitions len
+        (liftM digitToInt (oneOf digits))
     where
-    naturalP = liftM combine $ many1 (liftM digitToInt digit)
-    combine = snd . foldr (\d (pos, acc) -> (10 * pos, acc + pos * d)) (1, 0)
+    repetitions Nothing  = many1
+    repetitions (Just n) = exactly n
+    (digits, mult) = case base of
+            Unary       -> ("1", 1)
+            Binary      -> ("01", 2)
+            Ternary     -> ("012", 3)
+            Octal       -> (['0'..'7'], 8)
+            Decimal     -> (['0'..'9'], 10)
+            Hexadecimal -> (['0'..'9'] ++ ['a'..'f'] ++ ['A'..'F'], 16)
+    combine = snd . foldr (\d (pos, acc) -> (mult * pos, acc + pos * d)) (1, 0)
+
 
 -- | Parse a character class.  A character class consists of a sequence of
 --   ranges: [a-ctx-z] is the range [(a,c), (t,t), (x,z)].  If the first symbol
@@ -123,7 +161,7 @@ classP = Class <$> ((False <$ char '^') <|> pure True)
 
 -- FIXME: What's the difference between NamedSet True and NamedSet False?
 posixNamedSetP :: Parser ParsedRegex
-posixNamedSetP = firstMatching $ parsersFromTable
+posixNamedSetP = choice $ parsersFromTable
     (try . delims "[:" ":]" . string) (NamedSet True)
     [ ("alnum", NSAlnum)
     , ("alpha", NSAlpha)
@@ -151,11 +189,15 @@ parsersFromTable :: (a -> Parser a) -> (b -> c) -> [(a, b)] -> [Parser c]
 parsersFromTable parserMod valMod = map
     (\(s,v) -> parserMod s >> return (valMod v))
 
+-- | Repeat the given parser exactly n times and collect the results.
+exactly :: Int -> Parser a -> Parser [a]
+exactly 0 _ = return []
+exactly 1 p = p >>= return . (:[])
+exactly n p = do
+    x <- p
+    xs <- exactly (n - 1) p
+    return (x : xs)
 
--- | Take a list of parsers and builds a parser that applies the parsers in the
---   order they have in the list.  Returns the result of the first matching parser.
-firstMatching :: [Parser a] -> Parser a
-firstMatching = foldr ((<|>)) parserZero
 
 -- | Build a parser that parses the given left- and right-delimiters around
 --   the provided parser p.

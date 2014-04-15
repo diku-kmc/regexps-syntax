@@ -125,6 +125,7 @@ simplify' i _ _ (Class b rs) =
             $ concat
                   [map Int.Byte [fromIntegral (ord c1)..fromIntegral (ord c2)]
                        | (c1, c2) <- rs']
+simplify' _ _ _ (NamedSet _ n) = error $ "I can't simplify " ++ show n
 simplify' i _ _ (Range _ from (Just to))
     | to < from = (i, Nothing)
 simplify' i o b (Range e from mto)

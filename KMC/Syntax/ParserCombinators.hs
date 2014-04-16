@@ -21,6 +21,9 @@ import           KMC.Syntax.ParserTypes        (Parser)
 -- Various useful parser combinators.
 --------------------------------------------------------------------------------
 
+
+
+
 -- | Automatically build a parse table from a data type that implements the Show
 --   type class.  Takes a function that specifies how the parsers
 --   should behave as a function of their "Show value", a function to transform

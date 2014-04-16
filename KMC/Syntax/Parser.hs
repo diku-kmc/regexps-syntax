@@ -28,7 +28,7 @@ parseRegex conf str = case parse (anchoredRegexP conf) "-" str of
 
 
 anchoredRegexP :: RegexParserConfig -> Parser (Anchoring, ParsedRegex)
-anchoredRegexP conf = do
+anchoredRegexP conf = freespaced $ do
     anStart <- anchorStart
     re <- regexP conf
     anEnd <- anchorEnd
@@ -42,19 +42,34 @@ anchoredRegexP conf = do
                   then ((char '^' >> return True) <|> (return False),
                         (char '$' >> return True) <|> (return False))
                   else (return False, return False)
+    freespaced p = if rep_freespacing conf
+                   then spacesAndCommentsP *> p <* spacesAndCommentsP
+                   else p
 
 -- | The main regexp parser.
 regexP :: RegexParserConfig -> Parser ParsedRegex
-regexP conf = buildExpressionParser (table conf) $
+regexP conf = freespaced $ buildExpressionParser (table conf) $
                ifElseP (rep_grouping conf)
                       (  (nonGroupParens (regexP conf) >>= return . Group False)
                      <|> (parens (regexP conf) >>= return . Group True))
                       (  parens (regexP conf) >>= return . Group False)
-           <|> ifP (rep_posix_names conf) posixNamedSetP
+           <|> ifP (rep_posix_names conf) (freespaced posixNamedSetP)
            <|> ifP (rep_charclass conf) (brackets classP)
            <|> ifP (rep_suppression conf) (suppressDelims (suppressedP conf))
-           <|> ifP (rep_wildcard conf) wildcardP
-           <|> charP conf
+           <|> ifP (rep_wildcard conf) (freespaced wildcardP)
+           <|> (freespaced $ charP conf)
+    where
+    freespaced p = if rep_freespacing conf
+                   then spacesAndCommentsP *> p <* spacesAndCommentsP
+                   else p
+
+-- | Throw away whitespace and comments.
+spacesAndCommentsP :: Parser ()
+spacesAndCommentsP = spaces
+                    >> optional (
+                        char '#' >>
+                        manyTill anyChar (eof <|> (newline >> return ())) >>
+                        spaces)
 
 ifP :: Bool -> Parser a -> Parser a
 ifP b p = ifElseP b p parserZero
@@ -131,7 +146,8 @@ legalChar conf = noneOf notChars
                     (rep_charclass conf, '[') ?: -- been "unlocked".
                     (rep_question conf,  '?') ?:
                     (rep_plus conf,      '+') ?:
-                    (rep_ranges conf,    '{') ?: [] )
+                    (rep_ranges conf,    '{') ?:
+                    (rep_freespacing conf, '#') ?: [] )
         u c = let Just x = lookup c cs in x
 
 
@@ -145,6 +161,7 @@ rangeP = do
     ((,) n) <$> (char ',' *> optionMaybe (numeralP Decimal Nothing)
               <|> pure (Just n))
 
+-- TODO: Unicode identifiers in character classes!
 
 -- | Parse a character class.  A character class consists of a sequence of
 --   ranges: [a-ctx-z] is the range [(a,c), (t,t), (x,z)].  If the first symbol

@@ -11,17 +11,21 @@ import           KMC.Syntax.ParserTypes
 
 -- | Parse a Unicode code point specification of a char.
 unicodeCodePointP :: Parser Char
-unicodeCodePointP = char '\\' *> (char 'u' *> numeralP Hexadecimal (Just 4)
-                             <|> char 'x' *> braces (numeralP Hexadecimal (Just 4)))
+unicodeCodePointP = char '\\' *> (char 'u' *> numeralP Hexadecimal (Just (EQ, 4))
+                             <|> char 'x' *> braces (numeralP Hexadecimal (Just (EQ, 4))))
                 >>= return . chr
 
 
 unicodeScriptP :: Parser UnicodeScript
-unicodeScriptP = genParseTable (\s -> try $ string "\\p" *> braces (string s))
-                 [Arabic .. Yi]
+unicodeScriptP = genParseTable
+                (\s -> try $ string "\\p" *> braces (string s))
+                id
+                [Arabic .. Yi]
 
 unicodeBlockP :: Parser UnicodeBlock
-unicodeBlockP = genParseTable (\s -> try $ string "\\p" *> braces (string s))
+unicodeBlockP = genParseTable
+                (\s -> try $ string "\\p" *> braces (string s))
+                id
                 [InAlphabetic_Presentation_Forms .. InYijing_Hexagram_Symbols]
 
 -- | The Unicode scipt possibilities.

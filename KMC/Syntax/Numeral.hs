@@ -6,9 +6,9 @@ module KMC.Syntax.Numeral
 import           Control.Monad                 (liftM)
 import           Data.Char                     (digitToInt)
 import           Text.Parsec.Prim              (Parsec)
-import           Text.ParserCombinators.Parsec (many1, oneOf)
+import           Text.ParserCombinators.Parsec (many, oneOf)
 
-import           KMC.Syntax.ParserCombinators  (exactly)
+import           KMC.Syntax.ParserCombinators  (repetitions)
 import           KMC.Syntax.ParserTypes        (Parser)
 
 -- | Supported bases for integers.  Most of them are silly.
@@ -18,16 +18,18 @@ data IntegerBase = Unary    -- ^ The original and best
                  | Octal
                  | Decimal
                  | Hexadecimal
-    deriving (Show, Eq)
+    deriving (Show)
+
+type IntegerWidth = Maybe (Ordering, Int)
 
 -- | Parse a non-negative numeral in the given base and,
 --   if specified, with the given length.
-numeralP :: IntegerBase -> (Maybe Int) -> Parser Int
-numeralP base len = liftM combine $ repetitions len
+numeralP :: IntegerBase -> IntegerWidth -> Parser Int
+numeralP base len = liftM combine $ repeats len
         (liftM digitToInt (oneOf digits))
     where
-    repetitions Nothing  = many1
-    repetitions (Just n) = exactly n
+    repeats Nothing       = many
+    repeats (Just (o, n)) = repetitions o n
     (digits, mult) = case base of
             Unary       -> ("1", 1)
             Binary      -> ("01", 2)

@@ -54,10 +54,10 @@ regexP conf = freespaced $ buildExpressionParser (table conf) $
                      <|> (parens (regexP conf) >>= return . Group True))
                       (  parens (regexP conf) >>= return . Group False)
            <|> ifP (rep_posix_names conf) (freespaced posixNamedSetP)
-           <|> ifP (rep_charclass conf) (brackets classP)
+           <|> ifP (rep_charclass conf) (brackets (classP conf))
            <|> ifP (rep_suppression conf) (suppressDelims (suppressedP conf))
            <|> ifP (rep_wildcard conf) (freespaced wildcardP)
-           <|> (freespaced $ charP conf)
+           <|> (freespaced $ charP NoCC conf)
     where
     freespaced p = if rep_freespacing conf
                    then spacesAndCommentsP *> p <* spacesAndCommentsP
@@ -128,27 +128,38 @@ wildcardP :: Parser ParsedRegex
 wildcardP = Dot <$ char '.'
 
 -- | Parse a single character and build a Regex for it.
-charP :: RegexParserConfig -> Parser ParsedRegex
-charP conf = Chr <$> legalChar conf
+charP :: CharClassPos -> RegexParserConfig -> Parser ParsedRegex
+charP ccp conf = Chr <$> legalChar ccp conf
+
+-- | Signal whether the character to be parsed is outside of a character class,
+--   or if it is inside one, whether it is the first or not.
+data CharClassPos = NoCC | FirstInCC | InCC
 
 -- | Parse a legal character.
-legalChar :: RegexParserConfig -> Parser Char
-legalChar conf = noneOf notChars
-         -- <|> try (char '$' <* lookAhead anyToken) -- ????
-         <|> try (char '\\' *> (u <$> oneOf (map fst cs)))
-         <|> ifP (rep_unicode conf) unicodeCodePointP
+legalChar :: CharClassPos -> RegexParserConfig -> Parser Char
+legalChar ccp conf = try (char '\\' *> (u <$> oneOf (map fst cs)))
+                  <|> try (ifP (rep_unicode conf) unicodeCodePointP)
+                  <|> noneOf notChars
   where cs = [('n', '\n'), ('t', '\t'), ('r', '\r')] ++
               zip notChars notChars
-        notChars = "*|()\\" ++ ( -- These are always special
-                    (rep_wildcard conf,  '.') ?: -- All these are special
-                    (rep_anchoring conf, '$') ?: -- on the condition that
-                    (rep_anchoring conf, '^') ?: -- their superpowers have
-                    (rep_charclass conf, '[') ?: -- been "unlocked".
-                    (rep_question conf,  '?') ?:
-                    (rep_plus conf,      '+') ?:
-                    (rep_ranges conf,    '{') ?:
-                    (rep_freespacing conf, '#') ?: [] )
+        notChars = (if inCC then "" else "*|()\\") ++ ( -- These are always special
+                (outofCC && rep_wildcard conf,    '.') ?: -- All these are special
+                (outofCC && rep_anchoring conf,   '$') ?: -- on the condition that
+                (outofCC && rep_anchoring conf,   '^') ?: -- their superpowers have
+                (outofCC && rep_charclass conf,   '[') ?: -- been "unlocked".
+                (outofCC && rep_question conf,    '?') ?:
+                (outofCC && rep_plus conf,        '+') ?:
+                (outofCC && rep_ranges conf,      '{') ?:
+                (outofCC && rep_freespacing conf, '#') ?:
+                (inCC && not inCCFirst,           ']') ?: [] )
         u c = let Just x = lookup c cs in x
+        inCC = not outofCC
+        outofCC = case ccp of
+                  NoCC -> True
+                  _    -> False
+        inCCFirst = case ccp of
+                  FirstInCC -> True
+                  _         -> False
 
 
 -- | Parse a range of numbers.  For n, m natural numbers:
@@ -167,13 +178,13 @@ rangeP = do
 --   ranges: [a-ctx-z] is the range [(a,c), (t,t), (x,z)].  If the first symbol
 --   is a caret ^, the character class is negative, i.e., it specifies all
 --   symbols *not* in the given ranges.
-classP :: Parser ParsedRegex
-classP = Class <$> ((False <$ char '^') <|> pure True)
+classP :: RegexParserConfig -> Parser ParsedRegex
+classP conf = Class <$> ((False <$ char '^') <|> pure True)
             <*> ((:) <$> charClassP True <*> many (charClassP False))
     where
     charClassP isFirst = do
-        c1 <- if isFirst then anyChar else noneOf "]"
-        try (char '-' >> ((,) c1) <$> noneOf "]")
+        c1 <- ifElseP isFirst (legalChar FirstInCC conf) (legalChar InCC conf)
+        try (char '-' >> ((,) c1) <$> (legalChar InCC conf))
             <|> pure (c1, c1)
 
 -- FIXME: What's the difference between NamedSet True and NamedSet False?

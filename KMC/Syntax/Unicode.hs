@@ -24,9 +24,21 @@ unicodeScriptP = genParseTable
 
 unicodeBlockP :: Parser UnicodeBlock
 unicodeBlockP = genParseTable
-                (\s -> try $ string "\\p" *> braces (string s))
+                (\s -> try $ string "\\p" *> braces (string (fix_name s)))
                 id
                 [InAlphabetic_Presentation_Forms .. InYijing_Hexagram_Symbols]
+    where
+    fix_name s = case s of
+        "InArabic_Presentation_Forms_A" -> "InArabic_Presentation_Forms-A"
+        "InArabic_Presentation_Forms_B" -> "InArabic_Presentation_Forms-B"
+        "InMiscellaneous_Mathematical_Symbols_A" -> "InMiscellaneous_Mathematical_Symbols-A"
+        "InMiscellaneous_Mathematical_Symbols_B" -> "InMiscellaneous_Mathematical_Symbols-B"
+        "InSupplemental_Arrows_A" -> "InSupplemental_Arrows-A"
+        "InSupplemental_Arrows_B" -> "InSupplemental_Arrows-B"
+        "InLatin_Extended_A" -> "InLatin_Extended-A"
+        "InLatin_Extended_B" -> "InLatin_Extended-B"
+        x -> x
+
 
 -- | The Unicode scipt possibilities.
 data UnicodeScript = Arabic

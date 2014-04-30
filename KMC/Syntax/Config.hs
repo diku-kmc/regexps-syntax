@@ -14,6 +14,7 @@ data RegexParserConfig = RegexParserConfig
             , rep_anchoring     :: Bool -- ^ Anchoring support
             , rep_grouping      :: Bool -- ^ Use (non-)grouping parens
             , rep_freespacing   :: Bool -- ^ Free-spacing mode
+            , rep_illegal_chars :: [Char] -- ^ Extra illegal (escapable) chars.
             }
     deriving (Show)
 
@@ -32,6 +33,7 @@ basicRegexParser = RegexParserConfig
                     , rep_anchoring     = False
                     , rep_grouping      = False
                     , rep_freespacing   = False
+                    , rep_illegal_chars = []
                     }
 
 -- | A fancy regex parser has all the fancy stuff.
@@ -49,4 +51,5 @@ fancyRegexParser = RegexParserConfig
                     , rep_anchoring     = True
                     , rep_grouping      = True
                     , rep_freespacing   = True
+                    , rep_illegal_chars = []
                     }

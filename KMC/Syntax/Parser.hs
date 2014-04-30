@@ -1,4 +1,4 @@
-module KMC.Syntax.Parser (parseRegex) where
+module KMC.Syntax.Parser (parseRegex, anchoredRegexP) where
 
 import           Control.Applicative           (pure, (*>), (<$), (<$>), (<*),
                                                 (<*>), (<|>))
@@ -91,7 +91,7 @@ table :: RegexParserConfig -> OperatorTable String () Identity ParsedRegex
 table conf = [
           -- The various postfix operators (which are determined by the
           -- configuration object) bind tightest.
-          map Postfix $
+          map Postfix $ map freespaced $
             -- Lazy and greedy Kleene Star:
             (rep_lazyness conf, try (string "*?") >> return LazyStar)         ?:
             (char '*' >> return Star)                                          :
@@ -112,10 +112,14 @@ table conf = [
                     >>= \(n, m) -> return (\e -> Range e n m))                ?:
                                                                               []
         -- Product (juxtaposition) binds tigther than sum.
-        , [ Infix (notFollowedBy (char '|') >> return Concat) AssocRight ]
+        , [ Infix (freespaced (notFollowedBy (char '|') >> return Concat)) AssocRight ]
         -- Sum binds least tight.
-        , [ Infix (char '|'                 >> return Branch) AssocRight ]
+        , [ Infix (freespaced (char '|'                 >> return Branch)) AssocRight ]
         ]
+    where
+    freespaced p = if rep_freespacing conf
+                   then spacesAndCommentsP *> p <* spacesAndCommentsP
+                   else p
 
 
 -- | Parse a regular expression and suppress it.
@@ -142,7 +146,9 @@ legalChar ccp conf = try (char '\\' *> (u <$> oneOf (map fst cs)))
                   <|> noneOf notChars
   where cs = [('n', '\n'), ('t', '\t'), ('r', '\r')] ++
               zip notChars notChars
-        notChars = (if inCC then "" else "*|()\\") ++ ( -- These are always special
+        notChars = (if inCC then ""  -- These are always special
+                            else "*|()\\" ++ rep_illegal_chars conf)
+                ++ (
                 (outofCC && rep_wildcard conf,    '.') ?: -- All these are special
                 (outofCC && rep_anchoring conf,   '$') ?: -- on the condition that
                 (outofCC && rep_anchoring conf,   '^') ?: -- their superpowers have
@@ -171,8 +177,6 @@ rangeP = do
     n <- numeralP Decimal Nothing
     ((,) n) <$> (char ',' *> optionMaybe (numeralP Decimal Nothing)
               <|> pure (Just n))
-
--- TODO: Unicode identifiers in character classes!
 
 -- | Parse a character class.  A character class consists of a sequence of
 --   ranges: [a-ctx-z] is the range [(a,c), (t,t), (x,z)].  If the first symbol

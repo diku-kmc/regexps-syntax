@@ -52,7 +52,13 @@ library
   -- Modules exported by the library.
   exposed-modules:     KMC.Syntax.External,
                        KMC.Syntax.Internal,
-                       KMC.Syntax.Parser
+                       KMC.Syntax.Parser,
+                       KMC.Syntax.Config,
+                       KMC.Syntax.ParserTypes,
+                       KMC.Syntax.Numeral,
+                       KMC.Syntax.ParserCombinators,
+                       KMC.Syntax.Unicode,
+                       KMC.Syntax.Char
 
   -- Other library packages from which modules are imported.
   build-depends:       base           >=4.6   &&  <4.7,

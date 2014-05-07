@@ -29,8 +29,11 @@ parseRegex conf str = case parse (anchoredRegexP conf) "-" str of
 
 anchoredRegexP :: RegexParserConfig -> Parser (Anchoring, ParsedRegex)
 anchoredRegexP conf = freespaced $ do
+    let conf' = if rep_with_unit conf
+                then conf { rep_illegal_chars = '1' : rep_illegal_chars conf}
+                else conf
     anStart <- anchorStart
-    re <- regexP conf
+    re <- regexP conf'
     anEnd <- anchorEnd
     return $ flip (,) re $ case (anStart, anEnd) of
         (True, True) -> AnchorBoth
@@ -57,6 +60,7 @@ regexP conf = freespaced $ buildExpressionParser (table conf) $
            <|> ifP (rep_charclass conf) (brackets (classP conf))
            <|> ifP (rep_suppression conf) (suppressDelims (suppressedP conf))
            <|> ifP (rep_wildcard conf) (freespaced wildcardP)
+           <|> ifP (rep_with_unit conf) (freespaced unitP)
            <|> (freespaced $ charP NoCC conf)
     where
     freespaced p = if rep_freespacing conf
@@ -130,6 +134,10 @@ suppressedP conf = Suppress <$> regexP conf
 --   This must be added to the datatype Regex before it can be used.
 wildcardP :: Parser ParsedRegex
 wildcardP = Dot <$ char '.'
+
+-- | If the parser is configured to recognize unit, this parser will be in
+unitP :: Parser ParsedRegex
+unitP = One <$ char '1'
 
 -- | Parse a single character and build a Regex for it.
 charP :: CharClassPos -> RegexParserConfig -> Parser ParsedRegex

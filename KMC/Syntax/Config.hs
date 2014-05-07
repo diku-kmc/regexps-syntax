@@ -15,6 +15,7 @@ data RegexParserConfig = RegexParserConfig
             , rep_grouping      :: Bool -- ^ Use (non-)grouping parens
             , rep_freespacing   :: Bool -- ^ Free-spacing mode
             , rep_illegal_chars :: [Char] -- ^ Extra illegal (escapable) chars.
+            , rep_with_unit     :: Bool  -- ^ Parse "1" as unit?
             }
     deriving (Show)
 
@@ -34,6 +35,7 @@ basicRegexParser = RegexParserConfig
                     , rep_grouping      = False
                     , rep_freespacing   = False
                     , rep_illegal_chars = []
+                    , rep_with_unit     = False
                     }
 
 -- | A fancy regex parser has all the fancy stuff.
@@ -52,4 +54,5 @@ fancyRegexParser = RegexParserConfig
                     , rep_grouping      = True
                     , rep_freespacing   = True
                     , rep_illegal_chars = []
+                    , rep_with_unit     = False
                     }

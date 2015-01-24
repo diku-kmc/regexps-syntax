@@ -13,7 +13,7 @@ data Anchoring = AnchorNone
                | AnchorBoth
   deriving (Show)
 
--- | Named character classes from the POSIX standard.
+-- | Named character classes from the POSIX standard.
 data POSIXNamedSet = NSAlnum
                    | NSAlpha
                    | NSAscii
@@ -28,7 +28,7 @@ data POSIXNamedSet = NSAlnum
                    | NSUpper
                    | NSWord
                    | NSXDigit
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data Regex = One  -- ^ Epsilon
            | Dot  -- ^ Wildcard symbol
@@ -51,6 +51,68 @@ data Regex = One  -- ^ Epsilon
            | LazyQuestion Regex
            | Suppress Regex
   deriving (Show)
+
+data OpAssoc = OpAssocLeft | OpAssocRight | OpAssocNone
+  deriving (Eq, Ord, Show)
+
+unparse :: Regex -> String
+unparse = go OpAssocNone (0::Int)
+    where
+      noncap s = "(?:" ++ s ++ ")"
+      cap s = "(" ++ s ++ ")"
+
+      pars assoc p assoc' p' = if p > p' || (p == p' && assoc /= assoc') then noncap else id
+      
+      go _ _     One = ""
+      go _ _     Dot = "."
+      go _ _     (Chr a) = [a]
+      go _ _     (Group False e) = noncap $ go OpAssocNone 0 e
+      go _ _     (Group True e) = cap $ go OpAssocNone 0 e
+      go assoc p (Concat e1 e2) = pars assoc p OpAssocRight 2
+                                    (go OpAssocLeft 2 e1 ++ go OpAssocRight 2 e2)
+      go assoc p (Branch e1 e2) = pars assoc p OpAssocRight 1
+                                    (go OpAssocLeft 1 e1 ++ "|" ++ go OpAssocRight 1 e2)
+      go _ _     (Class b rs) = "[" ++ (if b then "" else "^") ++ concatMap rng rs ++ "]"
+      go _ _     (NamedSet b ns) = "[:" ++ (if b then "" else "^") ++ name ns ++ ":]"
+      go _ _     (Range e i mj) = go OpAssocNone 3 e
+                                  ++ "{" ++ show i
+                                  ++ (case mj of
+                                        Just j -> ","++show j
+                                        Nothing -> "")
+                                  ++ "}"
+      go assoc p (LazyRange e i mj) =
+        pars assoc p OpAssocNone 3 $
+          go OpAssocNone 3 e
+          ++ "{" ++ show i
+          ++ (case mj of
+                Just j -> ","++show j
+                Nothing -> "")
+          ++ "}?"
+      go assoc p (Star e)     = pars assoc p OpAssocNone 3 $ go OpAssocNone 3 e ++ "*"
+      go assoc p (LazyStar e) = pars assoc p OpAssocNone 3 $ go OpAssocNone 3 e ++ "*?"
+      go assoc p (Plus e)     = pars assoc p OpAssocNone 3 $ go OpAssocNone 3 e ++ "+"
+      go assoc p (LazyPlus e) = pars assoc p OpAssocNone 3 $ go OpAssocNone 3 e ++ "+?"
+      go assoc p (Question e) = pars assoc p OpAssocNone 4 $ go OpAssocNone 4 e ++ "?"
+      go assoc p (LazyQuestion e) = pars assoc p OpAssocNone 3 $ go OpAssocNone 3 e ++ "??"
+      go _ _ (Suppress _) = error "No syntax for suppress"
+
+      name ns = case ns of
+                 NSAlnum  -> "alnum"
+                 NSAlpha  -> "alpha"
+                 NSAscii  -> "ascii"
+                 NSBlank  -> "blank"
+                 NSCntrl  -> "cntrl"
+                 NSDigit  -> "digit"
+                 NSGraph  -> "graph"
+                 NSLower  -> "lower"
+                 NSPrint  -> "print"
+                 NSPunct  -> "punct"
+                 NSSpace  -> "space"
+                 NSUpper  -> "upper"
+                 NSWord   -> "word"
+                 NSXDigit -> "xdigit"
+
+      rng (a,b) = [a,'-',b]
 
 simplifyRanges :: [(Char, Char)] -> [(Char, Char)]
 simplifyRanges rs = simplifyRanges' $ sort $ filter validRange rs

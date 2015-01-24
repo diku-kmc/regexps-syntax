@@ -2,8 +2,6 @@ module KMC.Syntax.Parser (parseRegex, anchoredRegexP) where
 
 import           Control.Applicative           (pure, (*>), (<$), (<$>), (<*),
                                                 (<*>), (<|>))
-import           Control.Monad                 (liftM)
-import           Data.Char                     (digitToInt)
 import           Data.Functor.Identity         (Identity)
 import           Text.Parsec.Expr              (Assoc (..), Operator (..),
                                                 OperatorTable,

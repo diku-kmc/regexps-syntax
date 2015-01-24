@@ -5,7 +5,6 @@ module KMC.Syntax.Numeral
 
 import           Control.Monad                 (liftM)
 import           Data.Char                     (digitToInt)
-import           Text.Parsec.Prim              (Parsec)
 import           Text.ParserCombinators.Parsec (many, oneOf)
 
 import           KMC.Syntax.ParserCombinators  (repetitions)

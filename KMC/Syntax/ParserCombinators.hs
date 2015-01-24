@@ -11,7 +11,6 @@ module KMC.Syntax.ParserCombinators
     ) where
 
 import           Control.Applicative           ((*>), (<*))
-import           Control.Monad                 (liftM)
 import           Text.ParserCombinators.Parsec (choice, count, many, many1,
                                                 optionMaybe, string, try)
 

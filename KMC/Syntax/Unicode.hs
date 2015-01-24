@@ -2,7 +2,7 @@ module KMC.Syntax.Unicode where
 
 import           Control.Applicative           ((*>))
 import           Data.Char                     (chr)
-import           Text.ParserCombinators.Parsec (char, parseTest, string, try,
+import           Text.ParserCombinators.Parsec (char, string, try,
                                                 (<|>))
 
 import           KMC.Syntax.Numeral

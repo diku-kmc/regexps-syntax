@@ -1,6 +1,7 @@
 module KMC.Syntax.Internal
     ( GroupId
     , Regex(..)
+    , SymRegex(..)
     , Value(..)
     , PDigit(..)
     , Pos
@@ -16,8 +17,9 @@ module KMC.Syntax.Internal
 
 import           Control.Applicative ((<$>))
 import           Data.Char           (chr, ord)
-import           Data.List           (intercalate)
+import           Data.List           (intercalate, sort)
 import           Data.Word           (Word8)
+import           KMC.Syntax.ByteClass
 
 modName :: String
 modName = "KMC.Syntax.Internal"
@@ -32,6 +34,16 @@ data Regex = Byte Word8       -- ^ Singleton byte
            | K Regex          -- ^ Kleene star
            | G GroupId Regex  -- ^ Group w./ an id
   deriving (Show, Eq, Ord)
+  
+-- | Symbolic regexes. This is the same as the Regex type, but with abstract
+-- byte classes instead of single literate bytes.
+data SymRegex = SClass ByteClass
+              | SOne
+              | SAlt SymRegex SymRegex
+              | SCat SymRegex SymRegex
+              | SRep SymRegex
+  deriving (Show, Eq, Ord)
+
 
 -- | Very simple pretty printing. Does not try to adhere to any specific
 -- external syntax, and will print excessive parentheses.

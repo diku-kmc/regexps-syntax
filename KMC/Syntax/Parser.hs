@@ -24,9 +24,15 @@ parseRegex conf str = case parse (anchoredRegexP conf) "-" str of
                    Left e   -> Left $ show e
                    Right re -> Right re
 
+-- | Wraps a parser in a parser that throws away whitespace and
+-- comments if the configuration object tells it to.
+freespaced :: RegexParserConfig -> Parser a -> Parser a
+freespaced conf p = if rep_freespacing conf
+                    then spacesAndCommentsP *> p <* spacesAndCommentsP
+                    else p
 
 anchoredRegexP :: RegexParserConfig -> Parser (Anchoring, ParsedRegex)
-anchoredRegexP conf = freespaced $ do
+anchoredRegexP conf = freespaced conf $ do
     let conf' = if rep_with_unit conf
                 then conf { rep_illegal_chars = '1' : rep_illegal_chars conf}
                 else conf
@@ -43,27 +49,20 @@ anchoredRegexP conf = freespaced $ do
                   then ((char '^' >> return True) <|> (return False),
                         (char '$' >> return True) <|> (return False))
                   else (return False, return False)
-    freespaced p = if rep_freespacing conf
-                   then spacesAndCommentsP *> p <* spacesAndCommentsP
-                   else p
 
 -- | The main regexp parser.
 regexP :: RegexParserConfig -> Parser ParsedRegex
-regexP conf = freespaced $ buildExpressionParser (table conf) $
+regexP conf = freespaced conf $ buildExpressionParser (table conf) $
                ifElseP (rep_grouping conf)
                       (  (nonGroupParens (regexP conf) >>= return . Group False)
                      <|> (parens (regexP conf) >>= return . Group True))
                       (  parens (regexP conf) >>= return . Group False)
-           <|> ifP (rep_posix_names conf) (freespaced posixNamedSetP)
+           <|> ifP (rep_posix_names conf) (freespaced conf posixNamedSetP)
            <|> ifP (rep_charclass conf) (brackets (classP conf))
            <|> ifP (rep_suppression conf) (suppressDelims (suppressedP conf))
-           <|> ifP (rep_wildcard conf) (freespaced wildcardP)
-           <|> ifP (rep_with_unit conf) (freespaced unitP)
-           <|> (freespaced $ charP NoCC conf)
-    where
-    freespaced p = if rep_freespacing conf
-                   then spacesAndCommentsP *> p <* spacesAndCommentsP
-                   else p
+           <|> ifP (rep_wildcard conf) (freespaced conf wildcardP)
+           <|> ifP (rep_with_unit conf) (freespaced conf unitP)
+           <|> (freespaced conf $ charP NoCC conf)
 
 -- | Throw away whitespace and comments.
 spacesAndCommentsP :: Parser ()
@@ -93,7 +92,7 @@ table :: RegexParserConfig -> OperatorTable String () Identity ParsedRegex
 table conf = [
           -- The various postfix operators (which are determined by the
           -- configuration object) bind tightest.
-          map Postfix $ map freespaced $
+          map Postfix $ map (freespaced conf) $
             -- Lazy and greedy Kleene Star:
             (rep_lazyness conf, try (string "*?") >> return LazyStar)         ?:
             (char '*' >> return Star)                                          :
@@ -114,14 +113,14 @@ table conf = [
                     >>= \(n, m) -> return (\e -> Range e n m))                ?:
                                                                               []
         -- Product (juxtaposition) binds tigther than sum.
-        , [ Infix (freespaced (notFollowedBy (char '|') >> return Concat)) AssocRight ]
+        , [ Infix (freespaced conf (notFollowedBy (char '|') >> return Concat)) AssocRight ]
         -- Sum binds least tight.
-        , [ Infix (freespaced (char '|'                 >> return Branch)) AssocRight ]
+        , [ Infix (freespaced conf (char '|'                 >> return Branch)) AssocRight ]
         ]
-    where
-    freespaced p = if rep_freespacing conf
-                   then spacesAndCommentsP *> p <* spacesAndCommentsP
-                   else p
+    -- where
+    -- freespaced p = if rep_freespacing conf
+    --                then spacesAndCommentsP *> p <* spacesAndCommentsP
+    --                else p
 
 
 -- | Parse a regular expression and suppress it.

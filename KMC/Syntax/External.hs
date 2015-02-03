@@ -50,7 +50,7 @@ data Regex = One  -- ^ Epsilon
            | Question Regex -- ^ Question mark (1 or 0 repetitions)
            | LazyQuestion Regex
            | Suppress Regex
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 data OpAssoc = OpAssocLeft | OpAssocRight | OpAssocNone
   deriving (Eq, Ord, Show)

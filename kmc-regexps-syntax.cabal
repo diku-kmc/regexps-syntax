@@ -58,9 +58,7 @@ library
                        KMC.Syntax.Numeral,
                        KMC.Syntax.ParserCombinators,
                        KMC.Syntax.Unicode,
-                       KMC.Syntax.Char,
-                       KMC.Syntax.ByteClass,
-                       KMC.Syntax.Bitcode
+                       KMC.Syntax.Char
 
   -- Other library packages from which modules are imported.
   build-depends:       base           >=4.6   &&  <5

@@ -180,7 +180,7 @@ legalChar ccp conf = try (char '\\' *> (u <$> oneOf (map fst cs)))
 rangeP :: Parser (Int, Maybe Int)
 rangeP = do
     n <- numeralP Decimal Nothing
-    ((,) n) <$> (char ',' *> optionMaybe (numeralP Decimal Nothing)
+    ((,) n) <$> (char ',' *> optionMaybe (numeralP Decimal (Just (GT, 1)))
               <|> pure (Just n))
 
 -- | Parse a character class.  A character class consists of a sequence of

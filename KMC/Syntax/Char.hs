@@ -13,3 +13,4 @@ caseInsensitiveChar c = char (toLower c) <|> char (toUpper c)
 -- | Match an any-cased version of a string.
 caseInsensitiveString :: String -> Parser String
 caseInsensitiveString s = try (mapM caseInsensitiveChar s) <?> "\"" ++ s ++ "\""
+

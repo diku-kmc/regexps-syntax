@@ -5,6 +5,7 @@ import           Control.Arrow       (second)
 import           Data.Char           (chr, ord)
 import           Data.List           (sort)
 import           Data.Maybe          (fromMaybe, isNothing)
+
 import qualified KMC.Syntax.Internal as Int
 
 data Anchoring = AnchorNone

@@ -11,8 +11,7 @@ import           KMC.Syntax.ParserTypes
 
 -- | Parse a Unicode code point specification of a char.
 unicodeCodePointP :: Parser Char
-unicodeCodePointP = char '\\' *> (char 'u' *> numeralP Hexadecimal (Just (EQ, 4))
-                             <|> char 'x' *> braces (numeralP Hexadecimal (Just (EQ, 4))))
+unicodeCodePointP = char '\\' *> (char 'u' *> numeralP Hexadecimal (Just (EQ, 4)))
                 >>= return . chr
 
 

@@ -13,8 +13,8 @@ module KMC.Syntax.ParserCombinators
 import           Control.Applicative           ((*>), (<*))
 import           Text.ParserCombinators.Parsec (choice, count, many, many1,
                                                 optionMaybe, string, try)
-
-import           KMC.Syntax.ParserTypes        (Parser)
+    
+import           KMC.Syntax.ParserTypes        
 
 --------------------------------------------------------------------------------
 -- Various useful parser combinators.
@@ -69,7 +69,7 @@ maximumRepetitions n p = do
 -- | Build a parser that parses the given left- and right-delimiters around
 --   the provided parser p.
 delims :: String -> String -> Parser a -> Parser a
-delims left right p = try (string left) *> p <* string right
+delims left right p = try (string left) *> p <* (string right)
 
 -- | Put parentheses around parser
 parens :: Parser a -> Parser a

@@ -3,9 +3,11 @@ module KMC.Syntax.ParserTypes
     , Parser
     ) where
 
-import           Text.Parsec.Prim    (Parsec)
+import           Text.Parsec.Prim (Parsec)
 
 import           KMC.Syntax.External (Regex)
 
 type ParsedRegex = Regex
 type Parser = Parsec String ()
+
+

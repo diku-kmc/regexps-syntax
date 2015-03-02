@@ -2,12 +2,14 @@ module KMC.Syntax.Parser (parseRegex, anchoredRegexP) where
 
 import           Control.Applicative           (pure, (*>), (<$), (<$>), (<*),
                                                 (<*>), (<|>))
+import           Data.Char                     (chr)
 import           Data.Functor.Identity         (Identity)
 import           Text.Parsec.Expr              (Assoc (..), Operator (..),
                                                 OperatorTable,
                                                 buildExpressionParser)
 import           Text.Parsec.Prim              (parserZero)
 import           Text.ParserCombinators.Parsec hiding (Parser, (<|>))
+import           Text.Printf                   (printf)
 
 import           KMC.Syntax.Config
 import           KMC.Syntax.External
@@ -117,10 +119,6 @@ table conf = [
         -- Sum binds least tight.
         , [ Infix (freespaced conf (char '|'                 >> return Branch)) AssocRight ]
         ]
-    -- where
-    -- freespaced p = if rep_freespacing conf
-    --                then spacesAndCommentsP *> p <* spacesAndCommentsP
-    --                else p
 
 
 -- | Parse a regular expression and suppress it.
@@ -144,12 +142,16 @@ charP ccp conf = Chr <$> legalChar ccp conf
 --   or if it is inside one, whether it is the first or not.
 data CharClassPos = NoCC | FirstInCC | InCC
 
--- | Parse a legal character.
+-- | Parse a legal character.  Characters can be specificed directly as byte values
+-- using the syntax \xFF where FF is the byte in hexadecimal notation, or the syntax
+-- \x{F...} where at least one hexadecimal digit is given between the braces.
 legalChar :: CharClassPos -> RegexParserConfig -> Parser Char
-legalChar ccp conf = try (char '\\' *> (u <$> oneOf (map fst cs)))
+legalChar ccp conf = try (char '\\' *> ( u <$> oneOf (map fst cs)
+                                        <|> char 'x' *> (namedByte <|> namedByteSequence)))
                   <|> try (ifP (rep_unicode conf) unicodeCodePointP)
                   <|> noneOf notChars
-  where cs = [('n', '\n'), ('t', '\t'), ('r', '\r')] ++
+  where cs = [ ('n', '\n'), ('t', '\t'), ('r', '\r'),
+               ('a', '\a'), ('f', '\f'), ('v', '\v') ] ++
               zip notChars notChars
         notChars = (if inCC then ""  -- These are always special
                             else "*|()\\" ++ rep_illegal_chars conf)
@@ -157,11 +159,11 @@ legalChar ccp conf = try (char '\\' *> (u <$> oneOf (map fst cs)))
                 (outofCC && rep_wildcard conf,    '.') ?: -- All these are special
                 (outofCC && rep_anchoring conf,   '$') ?: -- on the condition that
                 (outofCC && rep_anchoring conf,   '^') ?: -- their superpowers have
-                (outofCC && rep_charclass conf,   '[') ?: -- been "unlocked".
-                (outofCC && rep_question conf,    '?') ?:
-                (outofCC && rep_plus conf,        '+') ?:
-                (outofCC && rep_ranges conf,      '{') ?:
-                (outofCC && rep_freespacing conf, '#') ?:
+                (outofCC && rep_charclass conf,   '[') ?: -- been "unlocked" by the
+                (outofCC && rep_question conf,    '?') ?: -- RegexParserConfig.
+                (outofCC && rep_plus conf,        '+') ?: --
+                (outofCC && rep_ranges conf,      '{') ?: --
+                (outofCC && rep_freespacing conf, '#') ?: --
                 (inCC && not inCCFirst,           ']') ?: [] )
         u c = let Just x = lookup c cs in x
         inCC = not outofCC
@@ -172,6 +174,14 @@ legalChar ccp conf = try (char '\\' *> (u <$> oneOf (map fst cs)))
                   FirstInCC -> True
                   _         -> False
 
+-- | Parse a string of the form "FF" into the char with byte value FF.
+namedByte :: Parser Char
+namedByte = chr <$> numeralP Hexadecimal (Just (EQ, 2))
+
+-- | Parse a string of the form "{ABCD...}" into a char with the given hex code.
+namedByteSequence :: Parser Char
+namedByteSequence =  chr <$>
+                     braces (numeralP Hexadecimal (Just (GT, 1)))
 
 -- | Parse a range of numbers.  For n, m natural numbers:
 --  'n'   - "n repetitions" - (n, Just n)

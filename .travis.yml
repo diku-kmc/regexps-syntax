@@ -2,6 +2,12 @@
 # NB: don't set `language: haskell` here
 language: c
 
+cache:
+  directories:
+    - $HOME/build/diku-kmc/regexps-syntax/.cabal-sandbox
+  apt: true
+  
+
 notifications:
   email: false
 
@@ -19,6 +25,7 @@ before_install:
   - travis_retry sudo apt-get update
   - travis_retry sudo apt-get install cabal-install-$CABALVER ghc-$GHCVER
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
+  - cabal sandbox init
 
 install:
   - cabal --version

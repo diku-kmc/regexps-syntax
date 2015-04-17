@@ -1,4 +1,6 @@
 language: haskell
 ghc:      7.8
-script:   cabal test
-install:  cabal install --only-dependencies
+
+before_install: cabal install cabal-install
+install:        cabal install --only-dependencies
+script:         cabal test

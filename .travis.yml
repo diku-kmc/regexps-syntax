@@ -1,5 +1,14 @@
-language: haskell
-ghc:      7.8
+language: sh
+# The following enables several GHC versions to be tested; often it's
+# enough to test only against the last release in a major GHC
+# version. Feel free to omit lines listings versions you don't
+# need/want testing for.
+env:
+ - CABALVER=1.22 GHCVER=7.8.4
 
-install:        cabal install --only-dependencies
+install:
+ - cabal --version
+ - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
+ - cabal install --only-dependencies
+
 script:         cabal test

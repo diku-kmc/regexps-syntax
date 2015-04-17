@@ -206,10 +206,26 @@ classP conf = Class <$> ((False <$ char '^') <|> pure True)
         try (char '-' >> ((,) c1) <$> (legalChar InCC conf))
             <|> pure (c1, c1)
 
+
+-- From the sed manual:
+-- Though character classes don't generally conserve space on the line, they help make scripts portable for international use. The equivalent character sets /for U.S. users/ follows:
+--      [[:alnum:]]  - [A-Za-z0-9]     Alphanumeric characters
+--      [[:alpha:]]  - [A-Za-z]        Alphabetic characters
+--      [[:blank:]]  - [ \x09]         Space or tab characters only
+--      [[:cntrl:]]  - [\x00-\x19\x7F] Control characters
+--      [[:digit:]]  - [0-9]           Numeric characters
+--      [[:graph:]]  - [!-~]           Printable and visible characters
+--      [[:lower:]]  - [a-z]           Lower-case alphabetic characters
+--      [[:print:]]  - [ -~]           Printable (non-Control) characters
+--      [[:punct:]]  - [!-/:-@[-`{-~]  Punctuation characters
+--      [[:space:]]  - [ \t\v\f]       All whitespace chars
+--      [[:upper:]]  - [A-Z]           Upper-case alphabetic characters
+--      [[:xdigit:]] - [0-9a-fA-F]     Hexadecimal digit characters
+
 -- FIXME: What's the difference between NamedSet True and NamedSet False?
 posixNamedSetP :: Parser ParsedRegex
 posixNamedSetP = parseTable
-    (try . delims "[:" ":]" . string) (NamedSet True)
+    (try . delims "[[:" ":]]" . string) (NamedSet True)
     [ ("alnum", NSAlnum)
     , ("alpha", NSAlpha)
     , ("ascii", NSAscii)

@@ -1,12 +1,14 @@
 module KMC.Syntax.External where
 
-import           Control.Applicative ((<$>), (<*>))
-import           Control.Arrow       (second)
-import           Data.Char           (chr, ord)
-import           Data.List           (sort)
-import           Data.Maybe          (fromMaybe, isNothing)
+import           Control.Applicative
+import           Control.Arrow (second)
+import           Data.Char (chr, ord)
+import           Data.List (sort)
+import           Data.Maybe (fromMaybe, isNothing)
 
 import qualified KMC.Syntax.Internal as Int
+
+import           Prelude
 
 data Anchoring = AnchorNone
                | AnchorStart
@@ -204,6 +206,7 @@ simplify' i o b (Range e from mto)
     unroll 0 y = Question e : unroll 0 (y-1)
     unroll 1 1 = [e]
     unroll x y = e : unroll (x-1) (y-1)
+simplify' _ _ _ _ = error "incomplete pattern"
 
 simplifyOpts :: QuestionOrientation -> DotBehavior -> Regex -> Maybe Int.Regex
 simplifyOpts ori beh = snd . simplify' 1 ori beh

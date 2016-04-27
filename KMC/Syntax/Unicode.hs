@@ -1,13 +1,14 @@
 module KMC.Syntax.Unicode where
 
-import           Control.Applicative           ((*>))
-import           Data.Char                     (chr)
-import           Text.ParserCombinators.Parsec (char, string, try,
-                                                (<|>))
+import Control.Applicative
+import Data.Char (chr)
+import Text.ParserCombinators.Parsec (char, string, try)
 
-import           KMC.Syntax.Numeral
-import           KMC.Syntax.ParserCombinators
-import           KMC.Syntax.ParserTypes
+import KMC.Syntax.Numeral
+import KMC.Syntax.ParserCombinators
+import KMC.Syntax.ParserTypes
+
+import Prelude
 
 -- | Parse a Unicode code point specification of a char.
 unicodeCodePointP :: Parser Char

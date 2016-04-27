@@ -1,22 +1,21 @@
 module KMC.Syntax.Parser (parseRegex, anchoredRegexP) where
 
-import           Control.Applicative           (pure, (*>), (<$), (<$>), (<*),
-                                                (<*>), (<|>))
-import           Data.Char                     (chr)
-import           Data.Functor.Identity         (Identity)
-import           Text.Parsec.Expr              (Assoc (..), Operator (..),
-                                                OperatorTable,
-                                                buildExpressionParser)
-import           Text.Parsec.Prim              (parserZero)
-import           Text.ParserCombinators.Parsec hiding (Parser, (<|>))
-import           Text.Printf                   (printf)
+import Control.Applicative hiding (optional, many)
+import Data.Char (chr)
+import Data.Functor.Identity (Identity)
+import Text.Parsec.Expr (Assoc (..), Operator (..),
+                         OperatorTable, buildExpressionParser)
+import Text.Parsec.Prim (parserZero)
+import Text.ParserCombinators.Parsec hiding (Parser, (<|>))
 
-import           KMC.Syntax.Config
-import           KMC.Syntax.External
-import           KMC.Syntax.Numeral
-import           KMC.Syntax.ParserCombinators
-import           KMC.Syntax.ParserTypes
-import           KMC.Syntax.Unicode
+import KMC.Syntax.Config
+import KMC.Syntax.External
+import KMC.Syntax.Numeral
+import KMC.Syntax.ParserCombinators
+import KMC.Syntax.ParserTypes
+import KMC.Syntax.Unicode
+
+import Prelude
 
 -- | Parse a regular expression or fail with an error message.
 parseRegex :: RegexParserConfig

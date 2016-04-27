@@ -10,11 +10,13 @@ module KMC.Syntax.ParserCombinators
     , genParseTable
     ) where
 
-import           Control.Applicative           ((*>), (<*))
-import           Text.ParserCombinators.Parsec (choice, count, many, many1,
-                                                optionMaybe, string, try)
+import Control.Applicative hiding (many)
+import Text.ParserCombinators.Parsec (choice, count, many, many1,
+                                      optionMaybe, string, try)
     
-import           KMC.Syntax.ParserTypes        
+import KMC.Syntax.ParserTypes
+
+import Prelude
 
 --------------------------------------------------------------------------------
 -- Various useful parser combinators.

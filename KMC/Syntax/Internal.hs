@@ -12,15 +12,20 @@ module KMC.Syntax.Internal
     , vpos
     , rsub
     , prettyPrint
+    , check
+    , nullable
+    , project
+    , binder
+    , rpos
+    , groupCount
     ) where
 
-import           Control.Applicative ((<$>))
-import           Data.Char           (chr, ord)
-import           Data.List           (intercalate, sort)
-import           Data.Word           (Word8)
+import Control.Applicative
+import Data.Char (chr, ord)
+import Data.List (intercalate)
+import Data.Word (Word8)
 
-modName :: String
-modName = "KMC.Syntax.Internal"
+import Prelude
 
 type GroupId = Int
 

@@ -1,5 +1,5 @@
 name:                kmc-regexps-syntax
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            A parser for regular expressions.  Should support most
                      normal extensions to pure REs, like character classes
                      and ranges.

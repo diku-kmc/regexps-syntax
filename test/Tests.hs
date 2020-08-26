@@ -23,7 +23,7 @@ parserTests = map (Test . makeTest) parseUnparseTests
     where
       makeTest (Left (str, shouldSucceed)) =
         testInstance ("Parse/Unparse: " ++ str) (parseUnparse str shouldSucceed)
-      makeTest (Right re) = error "TODO: Make test case"
+      makeTest (Right _re) = error "TODO: Make test case"
 
       parseUnparse str shouldSucceed =
         return $
